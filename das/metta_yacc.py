@@ -182,6 +182,10 @@ class MettaYacc:
     ### End of parser rules ###
 
     def __init__(self, **kwargs):
+        self.unordered_symbol_names = [
+            'Set'
+        ]
+        AQUI nao colocar lista de ordered. Ao final, reportar todos os tipos ordered e unordered que foram encontrador.
         self.typedef_mark = ':'
         self.action_broker = kwargs.pop('action_broker', None)
         self.lex_wrap = MettaLex(**kwargs)
@@ -197,6 +201,7 @@ class MettaYacc:
         self.named_types = {}
         self.named_type_hash = {}
         self.symbol_hash = {}
+        self.reverse_symbol_hash_map = {}
         self.terminal_hash = {}
         self.parent_type = {}
 
@@ -215,7 +220,11 @@ class MettaYacc:
             self.named_type_hash[named_type] = named_type_hash
         return named_type_hash
 
-    def _nested_expression(self, sub_expressions, expression=None):
+    def _expression_is_unordered(self, expression):
+        symbol = self.reverse_symbol_hash_map[expression.hash_code]
+        return symbol in self.unordered_symbol_names:
+
+    def _nested_expression(self, sub_expressions, expression=None, check_unordered=True):
         if expression is None:
             expression = Expression()
         if any(sub_expression.hash_code is None for sub_expression in sub_expressions):
@@ -224,6 +233,10 @@ class MettaYacc:
         if sub_expressions[0].named_type is not None:
             expression.named_type = sub_expressions[0].named_type
             expression.named_type_hash = sub_expressions[0].named_type_hash
+            if check_unordered and self._expression_is_unordered(sub_expressions[0])::
+                sub_expressions = [\
+                    sub_expressions[0], \
+                    *sorted(sub_expressions[1:], key=lambda expression: expression.hash_code)]
             expression.composite_type = [
                 sub_expression.composite_type \
                     if len(sub_expression.composite_type) > 1 \
@@ -237,6 +250,12 @@ class MettaYacc:
             error = f"Syntax error in line {self.lexer.lineno} " + \
                     f"Non-typed expressions are not supported yet"
             raise MettaSyntaxError(error)
+        
+        if check_unordered:
+            #print(self.symbol_hash)
+            #print(self.reverse_symbol_hash_map)
+            print(self.reverse_symbol_hash_map[sub_expressions[0].hash_code])
+            #assert False
         return expression
 
     def _typedef(self, name, type_designator, expression=None):
@@ -257,6 +276,7 @@ class MettaYacc:
             expression.elements = [named_type_hash, type_designator_hash]
             expression.hash_code = self.hasher.expression_hash(expression.named_type_hash, expression.elements)
             self.symbol_hash[name] = expression.hash_code
+            self.reverse_symbol_hash_map[expression.hash_code] = name
         else:
             self.pending_named_types.append(((name, type_designator), expression))
         return expression

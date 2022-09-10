@@ -149,7 +149,7 @@ def test_nested_expression():
         None,
         'h3')
 
-    composite1 = yacc_wrap._nested_expression([expression1, expression2, expression3])
+    composite1 = yacc_wrap._nested_expression([expression1, expression2, expression3], check_unordered=False)
 
     assert not composite1.toplevel
     assert composite1.ordered
@@ -161,11 +161,11 @@ def test_nested_expression():
     assert composite1.elements == ['h2', 'h3']
     assert composite1.hash_code is not None
 
-    composite2 = yacc_wrap._nested_expression([expression1, expression3, expression2])
+    composite2 = yacc_wrap._nested_expression([expression1, expression3, expression2], check_unordered=False)
     assert composite2.composite_type_hash == composite1.composite_type_hash
     assert composite2.hash_code != composite1.hash_code
 
-    composite3 = yacc_wrap._nested_expression([expression1, composite1, composite2])
+    composite3 = yacc_wrap._nested_expression([expression1, composite1, composite2], check_unordered=False)
     assert not composite3.toplevel
     assert composite3.ordered
     assert composite3.terminal_name is None
